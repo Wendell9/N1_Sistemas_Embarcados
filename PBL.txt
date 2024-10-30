@@ -10,19 +10,23 @@
 //Autor Rev3: Fábio Henrique Cabrini
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <DHT.h>
 
 // Configurações - variáveis editáveis
 const char* default_SSID = "HORIZON"; // Nome da rede Wi-Fi
 const char* default_PASSWORD = "1234567890"; // Senha da rede Wi-Fi
-const char* default_BROKER_MQTT = "46.17.108.113"; // IP do Broker MQTT
+const char* default_BROKER_MQTT = "191.235.241.244"; // IP do Broker MQTT
 const int default_BROKER_PORT = 1883; // Porta do Broker MQTT
-const char* default_TOPICO_SUBSCRIBE = "/TEF/lamp01x/cmd"; // Tópico MQTT de escuta
-const char* default_TOPICO_PUBLISH_1 = "/TEF/lamp01x/attrs"; // Tópico MQTT de envio de informações para Broker
-const char* default_TOPICO_PUBLISH_2 = "/TEF/lamp01x/attrs/l"; // Tópico MQTT de envio de informações para Broker
-const char* default_ID_MQTT = "fiware_01x"; // ID MQTT
+const char* default_TOPICO_SUBSCRIBE = "/TEF/lamp02x/cmd"; // Tópico MQTT de escuta
+const char* default_TOPICO_PUBLISH_1 = "/TEF/lamp02x/attrs"; // Tópico MQTT de envio de informações para Broker
+const char* default_TOPICO_PUBLISH_2 = "/TEF/lamp02x/attrs/l"; // Tópico MQTT de envio de informações para Broker
+const char* default_TOPICO_PUBLISH_3 = "/TEF/lamp02x/attrs/t"; // Tópico MQTT de envio de informações de temperatura para Broker
+const char* default_TOPICO_PUBLISH_4 = "/TEF/lamp02x/attrs/u"; // Tópico MQTT de envio de informações de umidade para Broker
+
+const char* default_ID_MQTT = "fiware_02x"; // ID MQTT
 const int default_D4 = 2; // Pino do LED onboard
 // Declaração da variável para o prefixo do tópico
-const char* topicPrefix = "lamp01x";
+const char* topicPrefix = "lamp02x";
 
 // Variáveis para configurações editáveis
 char* SSID = const_cast<char*>(default_SSID);
@@ -32,8 +36,14 @@ int BROKER_PORT = default_BROKER_PORT;
 char* TOPICO_SUBSCRIBE = const_cast<char*>(default_TOPICO_SUBSCRIBE);
 char* TOPICO_PUBLISH_1 = const_cast<char*>(default_TOPICO_PUBLISH_1);
 char* TOPICO_PUBLISH_2 = const_cast<char*>(default_TOPICO_PUBLISH_2);
+char* TOPICO_PUBLISH_3 = const_cast<char*>(default_TOPICO_PUBLISH_3);
+char* TOPICO_PUBLISH_4 = const_cast<char*>(default_TOPICO_PUBLISH_4);
 char* ID_MQTT = const_cast<char*>(default_ID_MQTT);
 int D4 = default_D4;
+
+#define DHTPIN 15     
+#define DHTTYPE DHT22  // DHT 22  (AM2302), AM2321
+DHT dht(DHTPIN, DHTTYPE);
 
 WiFiClient espClient;
 PubSubClient MQTT(espClient);
@@ -58,6 +68,7 @@ void initMQTT() {
 }
 
 void setup() {
+    dht.begin();
     InitOutput();
     initSerial();
     initWiFi();
@@ -70,6 +81,8 @@ void loop() {
     VerificaConexoesWiFIEMQTT();
     EnviaEstadoOutputMQTT();
     handleLuminosity();
+    handleUmityTemperature();
+    delay(2000);
     MQTT.loop();
 }
 
@@ -171,4 +184,17 @@ void handleLuminosity() {
     Serial.print("Valor da luminosidade: ");
     Serial.println(mensagem.c_str());
     MQTT.publish(TOPICO_PUBLISH_2, mensagem.c_str());
+}
+
+void handleUmityTemperature(){
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  String mensagem = String(temperature);
+  String mensagem2 = String(humidity);
+  Serial.print("Valor da temperatura: ");
+  Serial.println(temperature);
+  Serial.print("Valor da Umidade: ");
+  Serial.println(humidity);
+  MQTT.publish(TOPICO_PUBLISH_3, mensagem.c_str());
+  MQTT.publish(TOPICO_PUBLISH_4, mensagem2.c_str());
 }
