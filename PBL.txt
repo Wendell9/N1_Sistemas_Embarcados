@@ -2,8 +2,8 @@
 //Resumo: Esse programa possibilita ligar e desligar o led onboard, além de mandar o status para o Broker MQTT possibilitando o Helix saber
 //se o led está ligado ou desligado.
 //Revisões:
-//Rev1: 26-08-2023 Código portado para o ESP32 e para realizar a leitura de luminosidade e publicar o valor em um tópico aprorpiado do broker
-//Autor Rev1: Lucas Demetrius Augusto
+//Rev1: 26-08-2023 Código portado para o ESP32 e para realizar a leitura de luminosidade e publicar o valor em um tópico aprorpiado do broker 
+//Autor Rev1: Lucas Demetrius Augusto 
 //Rev2: 28-08-2023 Ajustes para o funcionamento no FIWARE Descomplicado
 //Autor Rev2: Fábio Henrique Cabrini
 //Rev3: 1-11-2023 Refinamento do código e ajustes para o funcionamento no FIWARE Descomplicado
@@ -41,23 +41,23 @@ char* TOPICO_PUBLISH_4 = const_cast<char*>(default_TOPICO_PUBLISH_4);
 char* ID_MQTT = const_cast<char*>(default_ID_MQTT);
 int D4 = default_D4;
 
-#define DHTPIN 15    
-#define DHTTYPE DHT11  // DHT 22  (AM2302), AM2321
+#define DHTPIN 15     
+#define DHTTYPE DHT22  // DHT 22  (AM2302), AM2321
 DHT dht(DHTPIN, DHTTYPE);
 
 WiFiClient espClient;
 PubSubClient MQTT(espClient);
 char EstadoSaida = '0';
 
-// Variáveis para cálculo de média
-unsigned long lastAverageTime = 0;
-const unsigned long averageInterval = 60000; // 1 minuto em milissegundos
-int luminositySum = 0, luminosityCount = 0;
-float temperatureSum = 0, humiditySum = 0;
-int temperatureCount = 0, humidityCount = 0;
-
 void initSerial() {
     Serial.begin(115200);
+}
+
+std::vector<float> handleUmityTemperature(){
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  std::vector<float> leituras = {temperature,humidity};
+  return leituras;
 }
 
 void initWiFi() {
@@ -82,16 +82,55 @@ void setup() {
     initMQTT();
     delay(5000);
     MQTT.publish(TOPICO_PUBLISH_1, "s|on");
+    std::vector<float> handleUmityTemperature(); // Declaração da função
+
 }
 
 void loop() {
-    VerificaConexoesWiFIEMQTT();
-    EnviaEstadoOutputMQTT();
-    handleLuminosity();
-    handleUmityTemperature();
-    printAverages();
-    delay(2000);
-    MQTT.loop();
+  float avgtemperature = 0.0;
+  float avghumidty = 0.0;
+  int avgluminosity = 0;
+  std::vector<float> valoresDHT;
+  bool medidor=true;
+  unsigned long previousMillis = millis();  // Armazena o último tempo em que a ação foi realizada
+  const long interval = 30000;         // Intervalo de 30 segundos
+  unsigned long currentMillis = millis();
+  int i=0;
+
+     while (medidor) {
+     currentMillis = millis(); // Atualiza o tempo atual
+
+     if (currentMillis - previousMillis >= interval) { 
+
+      medidor=false;
+     }
+     else{
+      MQTT.loop();
+      VerificaConexoesWiFIEMQTT();
+      EnviaEstadoOutputMQTT();
+      avgluminosity+=handleLuminosity();
+      valoresDHT = handleUmityTemperature();
+      avgtemperature+=valoresDHT[0];
+      avghumidty+=valoresDHT[1];
+      i+=1;
+     }
+     }
+        avgtemperature=avgtemperature/i;
+        avghumidty=avghumidty/i;
+        avgluminosity=avgluminosity/i;
+        String mensagem = String(avgluminosity);
+        Serial.print("Valor da luminosidade: ");
+        Serial.println(mensagem.c_str());
+        MQTT.publish(TOPICO_PUBLISH_2, mensagem.c_str());
+        String mensagem2 = String(avgtemperature);
+        String mensagem3 = String(avghumidty);
+        Serial.print("Valor da temperatura: ");
+        Serial.println(mensagem2.c_str());
+        MQTT.publish(TOPICO_PUBLISH_3, mensagem2.c_str());
+        Serial.print("Valor da Umidade: ");
+        Serial.println(mensagem3.c_str());
+        MQTT.publish(TOPICO_PUBLISH_4, mensagem3.c_str());
+        MQTT.loop();
 }
 
 void reconectWiFi() {
@@ -184,82 +223,9 @@ void reconnectMQTT() {
     }
 }
 
-void handleLuminosity() {
+int handleLuminosity() {
     const int potPin = 34;
     int sensorValue = analogRead(potPin);
     int luminosity = map(sensorValue, 0, 4095, 0, 100);
-    String mensagem = String(luminosity);
-    Serial.print("Valor da luminosidade: ");
-    Serial.println(mensagem.c_str());
-    MQTT.publish(TOPICO_PUBLISH_2, mensagem.c_str());
-
-    // Acumular para média
-    luminositySum += luminosity;
-    luminosityCount++;
-}
-
-void handleUmityTemperature(){
-    float temperature = dht.readTemperature();
-    float humidity = dht.readHumidity();
-    String mensagem = String(temperature);
-    String mensagem2 = String(humidity);
-    Serial.print("Valor da temperatura: ");
-    Serial.println(temperature);
-    Serial.print("Valor da Umidade: ");
-    Serial.println(humidity);
-    MQTT.publish(TOPICO_PUBLISH_3, mensagem.c_str());
-    MQTT.publish(TOPICO_PUBLISH_4, mensagem2.c_str());
-
-    // Acumular para média
-    if (!isnan(temperature)) {
-        temperatureSum += temperature;
-        temperatureCount++;
-    }
-    if (!isnan(humidity)) {
-        humiditySum += humidity;
-        humidityCount++;
-    }
-}
-
-void printAverages() {
-    unsigned long currentTime = millis();
-    if (currentTime - lastAverageTime >= averageInterval) {
-        Serial.println("--- Médias do último minuto ---");
-       
-        if (luminosityCount > 0) {
-            float avgLuminosity = (float)luminositySum / luminosityCount;
-            Serial.print("Luminosidade média: ");
-            Serial.println(avgLuminosity);
-            String mensagem = String(avgLuminosity);
-            MQTT.publish(TOPICO_PUBLISH_2, mensagem.c_str());
-        }
-       
-        if (temperatureCount > 0) {
-            float avgTemperature = temperatureSum / temperatureCount;
-            Serial.print("Temperatura média: ");
-            Serial.println(avgTemperature);
-            String mensagem2 = String(avgTemperature);
-            MQTT.publish(TOPICO_PUBLISH_3, mensagem2.c_str());
-        }
-       
-        if (humidityCount > 0) {
-            float avgHumidity = humiditySum / humidityCount;
-            Serial.print("Umidade média: ");
-            Serial.println(avgHumidity);
-            String mensagem3 = String(avgHumidity);
-            MQTT.publish(TOPICO_PUBLISH_4, mensagem3.c_str());
-        }
-       
-        Serial.println("--------------------------------");
-
-        // Resetar as variáveis
-        luminositySum = 0;
-        luminosityCount = 0;
-        temperatureSum = 0;
-        temperatureCount = 0;
-        humiditySum = 0;
-        humidityCount = 0;
-
-        lastAverageTime = currentTime;
-    }
+    return luminosity;
 }

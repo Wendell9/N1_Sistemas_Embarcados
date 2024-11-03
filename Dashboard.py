@@ -5,11 +5,32 @@ import plotly.graph_objs as go
 import requests
 from datetime import datetime
 import pytz
+import json
 
 # Constants for IP and port
 IP_ADDRESS = "191.235.241.244"
 PORT_STH = 8666
 DASH_HOST = "0.0.0.0"  # Set this to "0.0.0.0" to allow access from any IP
+
+API_URL = f"http://{IP_ADDRESS}:1026/v2/entities/urn:ngsi-ld:Lamp:02x/attrs"
+
+def send_command(command):
+    headers = {
+        'Content-Type': 'application/json',
+        'fiware-service': 'smart',
+        'fiware-servicepath': '/'
+    }
+    body = {
+        command: {
+            "type": "command",
+            "value": ""
+        }
+    }
+    response = requests.post(API_URL, headers=headers, data=json.dumps(body))
+    if response.status_code == 204:
+        print("Comando enviado com sucesso.")
+    else:
+        print(f"Erro ao enviar comando: {response.status_code}, {response.text}")
 
 # Function to get luminosity, temperature, and humidity data from the API
 def get_luminosity_data(lastN):
@@ -85,7 +106,7 @@ def convert_to_lisbon_time(timestamps):
     return converted_timestamps
 
 # Set lastN value
-lastN = 10  # Get 10 most recent points at each interval
+lastN = 2  # Get 2 most recent points at each interval
 
 app = dash.Dash(__name__)
 
@@ -96,7 +117,7 @@ app.layout = html.Div([
     dcc.Store(id='data-store', data={'timestamps': [], 'luminosity_values': [], 'temperature_values': [], 'humidity_values': []}),
     dcc.Interval(
         id='interval-component',
-        interval=10*1000,  # in milliseconds (10 seconds)
+        interval=30*1000,  # in milliseconds (10 seconds)
         n_intervals=0
     )
 ])
@@ -122,17 +143,34 @@ def update_data_store(n, stored_data):
         # Converter timestamps para o fuso horário de Lisboa
         timestamps = convert_to_lisbon_time(timestamps)
 
-        # Verificar se temos pelo menos 10 valores para calcular a média
-        if len(luminosity_values) >= 10:
-            avg_luminosity = sum(luminosity_values[-10:]) / 10
-            avg_temperature = sum(temperature_values[-10:]) / 10
-            avg_humidity = sum(humidity_values[-10:]) / 10
-
-            # Adicionar a média dos últimos 10 valores ao stored_data
-            stored_data['timestamps'].append(timestamps[-1])  # Usar o timestamp mais recente
-            stored_data['luminosity_values'].append(avg_luminosity)
-            stored_data['temperature_values'].append(avg_temperature)
-            stored_data['humidity_values'].append(avg_humidity)
+        # Adicionar os novos dados ao stored_data
+        stored_data['timestamps'].extend(timestamps)
+        stored_data['luminosity_values'].extend(luminosity_values)
+        stored_data['temperature_values'].extend(temperature_values)
+        stored_data['humidity_values'].extend(humidity_values)
+        
+        gatilho=True
+        
+        # Verificar as condições das faixas
+        if temperature_values[-1] < 15 or temperature_values[-1] > 25:
+                gatilho=False
+                print(f"Temperatura fora da faixa: {temperature_values[-1]} °C")
+                send_command("on")  # Enviar comando para desligar
+                
+        if gatilho:
+            if luminosity_values[-1] < 0 or luminosity_values[-1] > 30:
+                gatilho=False
+                print(f"Luminosidade fora da faixa: {luminosity_values[-1]}%")
+                send_command("on")  # Enviar comando para desligar
+        
+        if gatilho:
+            if  humidity_values[-1] < 30 or  humidity_values[-1] > 50:
+                gatilho=False
+                print(f"Umidade fora da faixa: { humidity_values[-1]}%")
+                send_command("on")  # Enviar comando para desligar
+                
+        if gatilho:
+            send_command("off")
 
         return stored_data
 
