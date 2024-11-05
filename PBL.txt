@@ -17,16 +17,16 @@ const char* default_SSID = "HORIZON"; // Nome da rede Wi-Fi
 const char* default_PASSWORD = "1234567890"; // Senha da rede Wi-Fi
 const char* default_BROKER_MQTT = "191.235.241.244"; // IP do Broker MQTT
 const int default_BROKER_PORT = 1883; // Porta do Broker MQTT
-const char* default_TOPICO_SUBSCRIBE = "/TEF/lamp02x/cmd"; // Tópico MQTT de escuta
-const char* default_TOPICO_PUBLISH_1 = "/TEF/lamp02x/attrs"; // Tópico MQTT de envio de informações para Broker
-const char* default_TOPICO_PUBLISH_2 = "/TEF/lamp02x/attrs/l"; // Tópico MQTT de envio de informações para Broker
-const char* default_TOPICO_PUBLISH_3 = "/TEF/lamp02x/attrs/t"; // Tópico MQTT de envio de informações de temperatura para Broker
-const char* default_TOPICO_PUBLISH_4 = "/TEF/lamp02x/attrs/u"; // Tópico MQTT de envio de informações de umidade para Broker
+const char* default_TOPICO_SUBSCRIBE = "/TEF/lamp002/cmd"; // Tópico MQTT de escuta
+const char* default_TOPICO_PUBLISH_1 = "/TEF/lamp002/attrs"; // Tópico MQTT de envio de informações para Broker
+const char* default_TOPICO_PUBLISH_2 = "/TEF/lamp002/attrs/l"; // Tópico MQTT de envio de informações para Broker
+const char* default_TOPICO_PUBLISH_3 = "/TEF/lamp002/attrs/t"; // Tópico MQTT de envio de informações de temperatura para Broker
+const char* default_TOPICO_PUBLISH_4 = "/TEF/lamp002/attrs/h"; // Tópico MQTT de envio de informações de umidade para Broker
 
-const char* default_ID_MQTT = "fiware_02x"; // ID MQTT
+const char* default_ID_MQTT = "fiware_002"; // ID MQTT
 const int default_D4 = 2; // Pino do LED onboard
 // Declaração da variável para o prefixo do tópico
-const char* topicPrefix = "lamp02x";
+const char* topicPrefix = "lamp002";
 
 // Variáveis para configurações editáveis
 char* SSID = const_cast<char*>(default_SSID);
@@ -101,7 +101,8 @@ void loop() {
      currentMillis = millis(); // Atualiza o tempo atual
 
      if (currentMillis - previousMillis >= interval) { 
-
+      MQTT.loop();
+      VerificaConexoesWiFIEMQTT();
       medidor=false;
      }
      else{
@@ -115,6 +116,8 @@ void loop() {
       i+=1;
      }
      }
+        VerificaConexoesWiFIEMQTT();
+        EnviaEstadoOutputMQTT();
         avgtemperature=avgtemperature/i;
         avghumidty=avghumidty/i;
         avgluminosity=avgluminosity/i;
@@ -229,3 +232,4 @@ int handleLuminosity() {
     int luminosity = map(sensorValue, 0, 4095, 0, 100);
     return luminosity;
 }
+

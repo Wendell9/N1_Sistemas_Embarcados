@@ -12,7 +12,7 @@ IP_ADDRESS = "191.235.241.244"
 PORT_STH = 8666
 DASH_HOST = "0.0.0.0"  # Set this to "0.0.0.0" to allow access from any IP
 
-API_URL = f"http://{IP_ADDRESS}:1026/v2/entities/urn:ngsi-ld:Lamp:02x/attrs"
+API_URL = f"http://{IP_ADDRESS}:1026/v2/entities/urn:ngsi-ld:Lamp:002/attrs"
 
 def send_command(command):
     headers = {
@@ -26,7 +26,7 @@ def send_command(command):
             "value": ""
         }
     }
-    response = requests.post(API_URL, headers=headers, data=json.dumps(body))
+    response = requests.patch(API_URL, headers=headers, data=json.dumps(body))
     if response.status_code == 204:
         print("Comando enviado com sucesso.")
     else:
@@ -34,7 +34,7 @@ def send_command(command):
 
 # Function to get luminosity, temperature, and humidity data from the API
 def get_luminosity_data(lastN):
-    url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:02x/attributes/luminosity?lastN={lastN}"
+    url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:002/attributes/luminosity?lastN={lastN}"
     headers = {
         'fiware-service': 'smart',
         'fiware-servicepath': '/'
@@ -53,7 +53,7 @@ def get_luminosity_data(lastN):
         return []
 
 def get_temperature_data(lastN):
-    url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:02x/attributes/temperature?lastN={lastN}"
+    url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:002/attributes/temperature?lastN={lastN}"
     headers = {
         'fiware-service': 'smart',
         'fiware-servicepath': '/'
@@ -72,7 +72,7 @@ def get_temperature_data(lastN):
         return []
 
 def get_humidity_data(lastN):
-    url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:02x/attributes/umity?lastN={lastN}"
+    url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:002/attributes/humidity?lastN={lastN}"
     headers = {
         'fiware-service': 'smart',
         'fiware-servicepath': '/'
