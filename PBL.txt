@@ -41,6 +41,8 @@ char* TOPICO_PUBLISH_4 = const_cast<char*>(default_TOPICO_PUBLISH_4);
 char* ID_MQTT = const_cast<char*>(default_ID_MQTT);
 int D4 = default_D4;
 
+int buzzer = 5;
+
 #define DHTPIN 15     
 #define DHTTYPE DHT22  // DHT 22  (AM2302), AM2321
 DHT dht(DHTPIN, DHTTYPE);
@@ -83,7 +85,34 @@ void setup() {
     delay(5000);
     MQTT.publish(TOPICO_PUBLISH_1, "s|on");
     std::vector<float> handleUmityTemperature(); // Declaração da função
+    pinMode(buzzer, OUTPUT);
+}
 
+void tocasom(){
+  if (digitalRead(D4) == HIGH){
+    tone(buzzer, 261);
+/* Espera um tempo para desativar */
+delay(200);
+/* Desativa o buzzer */
+noTone(buzzer);
+/* Aciona o buzzer na frequência relativa ao Ré em Hz */
+tone(buzzer, 293);
+delay(200);
+noTone(buzzer);
+/* Aciona o buzzer na frequência relativa ao Mi em Hz */
+tone(buzzer, 329);
+delay(200);
+noTone(buzzer);
+/* Aciona o buzzer na frequência relativa ao Fá em Hz */
+tone(buzzer, 349);
+delay(200);
+noTone(buzzer);
+/* Aciona o buzzer na frequência relativa ao Sol em Hz */
+tone(buzzer, 392);
+delay(200);
+noTone(buzzer);
+delay(2000);
+  }
 }
 
 void loop() {
@@ -93,7 +122,7 @@ void loop() {
   std::vector<float> valoresDHT;
   bool medidor=true;
   unsigned long previousMillis = millis();  // Armazena o último tempo em que a ação foi realizada
-  const long interval = 30000;         // Intervalo de 30 segundos
+  const long interval = 15000;         // Intervalo de 30 segundos
   unsigned long currentMillis = millis();
   int i=0;
 
@@ -104,6 +133,7 @@ void loop() {
       MQTT.loop();
       VerificaConexoesWiFIEMQTT();
       medidor=false;
+      tocasom();
      }
      else{
       MQTT.loop();
@@ -114,6 +144,7 @@ void loop() {
       avgtemperature+=valoresDHT[0];
       avghumidty+=valoresDHT[1];
       i+=1;
+      tocasom();
      }
      }
         VerificaConexoesWiFIEMQTT();
@@ -134,6 +165,7 @@ void loop() {
         Serial.println(mensagem3.c_str());
         MQTT.publish(TOPICO_PUBLISH_4, mensagem3.c_str());
         MQTT.loop();
+        tocasom();
 }
 
 void reconectWiFi() {

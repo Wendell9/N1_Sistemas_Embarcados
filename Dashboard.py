@@ -93,7 +93,7 @@ def get_humidity_data(lastN):
 # Function to convert UTC timestamps to Lisbon time
 def convert_to_lisbon_time(timestamps):
     utc = pytz.utc
-    lisbon = pytz.timezone('Europe/Lisbon')
+    lisbon = pytz.timezone('America/Sao_Paulo')
     converted_timestamps = []
     for timestamp in timestamps:
         try:
@@ -112,6 +112,7 @@ app = dash.Dash(__name__)
 
 app.layout = html.Div([
     html.H1('Luminosity, Temperature, and Humidity Data Viewer'),
+    html.Div(id='alert-message', style={'color': 'red', 'font-weight': 'bold'}),
     dcc.Graph(id='data-graph'),
     # Store to hold historical data
     dcc.Store(id='data-store', data={'timestamps': [], 'luminosity_values': [], 'temperature_values': [], 'humidity_values': []}),
@@ -123,11 +124,14 @@ app.layout = html.Div([
 ])
 
 @app.callback(
-    Output('data-store', 'data'),
+    [Output('data-store', 'data'), Output('alert-message', 'children')],
     Input('interval-component', 'n_intervals'),
     State('data-store', 'data')
 )
 def update_data_store(n, stored_data):
+    alert_messages = []  # Lista para acumular mensagens de alerta
+    send_on_command = False  # Variável para decidir se o comando "on" será enviado
+
     # Obter dados
     data_luminosity = get_luminosity_data(lastN)
     data_temperature = get_temperature_data(lastN)
@@ -140,7 +144,7 @@ def update_data_store(n, stored_data):
         humidity_values = [float(entry['attrValue']) for entry in data_humidity]
         timestamps = [entry['recvTime'] for entry in data_luminosity]
 
-        # Converter timestamps para o fuso horário de Lisboa
+        # Converter timestamps para o fuso horário do Brasil
         timestamps = convert_to_lisbon_time(timestamps)
 
         # Adicionar os novos dados ao stored_data
@@ -148,33 +152,30 @@ def update_data_store(n, stored_data):
         stored_data['luminosity_values'].extend(luminosity_values)
         stored_data['temperature_values'].extend(temperature_values)
         stored_data['humidity_values'].extend(humidity_values)
-        
-        gatilho=True
-        
-        # Verificar as condições das faixas
+
+        # Verificar condições de gatilho e adicionar mensagens
         if temperature_values[-1] < 15 or temperature_values[-1] > 25:
-                gatilho=False
-                print(f"Temperatura fora da faixa: {temperature_values[-1]} °C")
-                send_command("on")  # Enviar comando para desligar
-                
-        if gatilho:
-            if luminosity_values[-1] < 0 or luminosity_values[-1] > 30:
-                gatilho=False
-                print(f"Luminosidade fora da faixa: {luminosity_values[-1]}%")
-                send_command("on")  # Enviar comando para desligar
-        
-        if gatilho:
-            if  humidity_values[-1] < 30 or  humidity_values[-1] > 50:
-                gatilho=False
-                print(f"Umidade fora da faixa: { humidity_values[-1]}%")
-                send_command("on")  # Enviar comando para desligar
-                
-        if gatilho:
-            send_command("off")
+            send_on_command = True
+            alert_messages.append(f"Temperatura fora da faixa: {temperature_values[-1]} °C.")
 
-        return stored_data
+        if luminosity_values[-1] < 0 or luminosity_values[-1] > 30:
+            send_on_command = True
+            alert_messages.append(f"Luminosidade fora da faixa: {luminosity_values[-1]}%.")
 
-    return stored_data
+        if humidity_values[-1] < 30 or humidity_values[-1] > 50:
+            send_on_command = True
+            alert_messages.append(f"Umidade fora da faixa: {humidity_values[-1]}%.")
+
+        # Enviar o comando com base nas verificações
+        if send_on_command:
+            send_command("on")  # Enviar comando "on" se alguma condição estiver fora da faixa
+        else:
+            send_command("off")  # Enviar comando "off" se todas as condições estiverem dentro da faixa
+
+    # Combinar as mensagens de alerta em uma única string
+    alert_message = [html.P(msg) for msg in alert_messages] if alert_messages else [html.P("Todos os valores estão dentro das faixas aceitáveis.")]
+
+    return stored_data, alert_message
 
 
 @app.callback(
