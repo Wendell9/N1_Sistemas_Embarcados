@@ -10,8 +10,7 @@ This project is a dashboard built with Python and Dash to monitor environmental 
 - [Code Overview](#code-overview)
   - [send_command](#send_command)
   - [get_luminosity_data, get_temperature_data, get_humidity_data](#get_luminosity_data-get_temperature_data-get_humidity_data)
-  - [convert_to_lisbon_time](#convert_to_lisbon_time)
-- [License](#license)
+  - [convert_to_Brazil_time](#convert_to_Brazil_time)
 
 ## Features
 - **Real-time data monitoring** for luminosity, temperature, and humidity.
@@ -50,7 +49,12 @@ To start the dashboard, run:
 
 By default, the app will be available at http://0.0.0.0:8050. Open this URL in your browser to access the dashboard.
 
-The dashboard will display a graph with real-time updates every 30 seconds, showing luminosity, temperature, and humidity data. Alerts will display at the top of the page if values fall outside the acceptable range:
+The dashboard will display a graph with real-time updates every 30 seconds, showing luminosity, temperature, and humidity data. 
+
+![image](https://github.com/user-attachments/assets/fab93a4e-7f8f-45aa-a546-5afc40e9f87d)
+
+
+Alerts will display at the top of the page if values fall outside the acceptable range:
 
 - Temperature: 15°C - 25°C
 - Luminosity: 0% - 30%
@@ -69,7 +73,7 @@ Turn off if all values are within the range.
 ## get_luminosity_data, get_temperature_data, get_humidity_data
 - Functions that fetch data from the API for each metric.
 - Use the lastN parameter to retrieve recent data points.
-## convert_to_lisbon_time
+## convert_to_Brazil_time
 - Converts UTC timestamps to Brazil’s Sao Paulo timezone for display purposes.
 # Example Output
 The dashboard shows time-series data for luminosity, temperature, and humidity, with dynamic updates every 30 seconds. Alerts are shown if values are outside acceptable ranges.
