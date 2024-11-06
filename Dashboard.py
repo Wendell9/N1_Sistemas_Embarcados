@@ -12,8 +12,10 @@ IP_ADDRESS = "191.235.241.244"
 PORT_STH = 8666
 DASH_HOST = "0.0.0.0"  # Set this to "0.0.0.0" to allow access from any IP
 
+# API URL for sending commands
 API_URL = f"http://{IP_ADDRESS}:1026/v2/entities/urn:ngsi-ld:Lamp:002/attrs"
 
+# Function to send on/off commands to the API
 def send_command(command):
     headers = {
         'Content-Type': 'application/json',
@@ -26,13 +28,14 @@ def send_command(command):
             "value": ""
         }
     }
+    # Sends the PATCH request to the API to change the device state
     response = requests.patch(API_URL, headers=headers, data=json.dumps(body))
     if response.status_code == 204:
-        print("Comando enviado com sucesso.")
+        print("Command sent successfully.")
     else:
-        print(f"Erro ao enviar comando: {response.status_code}, {response.text}")
+        print(f"Error sending command: {response.status_code}, {response.text}")
 
-# Function to get luminosity, temperature, and humidity data from the API
+# Function to get luminosity data from the API
 def get_luminosity_data(lastN):
     url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:002/attributes/luminosity?lastN={lastN}"
     headers = {
@@ -52,6 +55,7 @@ def get_luminosity_data(lastN):
         print(f"Error accessing {url}: {response.status_code}")
         return []
 
+# Function to get temperature data from the API
 def get_temperature_data(lastN):
     url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:002/attributes/temperature?lastN={lastN}"
     headers = {
@@ -71,6 +75,7 @@ def get_temperature_data(lastN):
         print(f"Error accessing {url}: {response.status_code}")
         return []
 
+# Function to get humidity data from the API
 def get_humidity_data(lastN):
     url = f"http://{IP_ADDRESS}:{PORT_STH}/STH/v1/contextEntities/type/Lamp/id/urn:ngsi-ld:Lamp:002/attributes/humidity?lastN={lastN}"
     headers = {
@@ -90,8 +95,8 @@ def get_humidity_data(lastN):
         print(f"Error accessing {url}: {response.status_code}")
         return []
 
-# Function to convert UTC timestamps to Lisbon time
-def convert_to_lisbon_time(timestamps):
+# Function to convert UTC timestamps to Brazil (Sao Paulo) timezone
+def convert_to_Brazil_time(timestamps):
     utc = pytz.utc
     lisbon = pytz.timezone('America/Sao_Paulo')
     converted_timestamps = []
@@ -100,91 +105,94 @@ def convert_to_lisbon_time(timestamps):
             timestamp = timestamp.replace('T', ' ').replace('Z', '')
             converted_time = utc.localize(datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')).astimezone(lisbon)
         except ValueError:
-            # Handle case where milliseconds are not present
+            # Handles cases without milliseconds
             converted_time = utc.localize(datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')).astimezone(lisbon)
         converted_timestamps.append(converted_time)
     return converted_timestamps
 
-# Set lastN value
-lastN = 2  # Get 2 most recent points at each interval
+# Set lastN value to retrieve the two most recent data points
+lastN = 2
 
+# Initialize the Dash app
 app = dash.Dash(__name__)
 
+# Define the app layout with title, graph, data store, and interval component
 app.layout = html.Div([
     html.H1('Luminosity, Temperature, and Humidity Data Viewer'),
     html.Div(id='alert-message', style={'color': 'red', 'font-weight': 'bold'}),
     dcc.Graph(id='data-graph'),
-    # Store to hold historical data
+    # Store component to save historical data between updates
     dcc.Store(id='data-store', data={'timestamps': [], 'luminosity_values': [], 'temperature_values': [], 'humidity_values': []}),
     dcc.Interval(
         id='interval-component',
-        interval=30*1000,  # in milliseconds (10 seconds)
+        interval=30*1000,  # 30-second interval in milliseconds
         n_intervals=0
     )
 ])
 
+# Callback to update data store and generate alerts
 @app.callback(
     [Output('data-store', 'data'), Output('alert-message', 'children')],
     Input('interval-component', 'n_intervals'),
     State('data-store', 'data')
 )
 def update_data_store(n, stored_data):
-    alert_messages = []  # Lista para acumular mensagens de alerta
-    send_on_command = False  # Variável para decidir se o comando "on" será enviado
+    alert_messages = []  # List to accumulate alert messages
+    send_on_command = False  # Determines if the "on" command should be sent
 
-    # Obter dados
+    # Retrieve data from API
     data_luminosity = get_luminosity_data(lastN)
     data_temperature = get_temperature_data(lastN)
     data_humidity = get_humidity_data(lastN)
 
     if data_luminosity and data_temperature and data_humidity:
-        # Extrair valores
+        # Extract data values
         luminosity_values = [float(entry['attrValue']) for entry in data_luminosity]
         temperature_values = [float(entry['attrValue']) for entry in data_temperature]
         humidity_values = [float(entry['attrValue']) for entry in data_humidity]
         timestamps = [entry['recvTime'] for entry in data_luminosity]
 
-        # Converter timestamps para o fuso horário do Brasil
-        timestamps = convert_to_lisbon_time(timestamps)
+        # Convert timestamps to Brazil timezone
+        timestamps = convert_to_Brazil_time(timestamps)
 
-        # Adicionar os novos dados ao stored_data
+        # Add new data to stored_data
         stored_data['timestamps'].extend(timestamps)
         stored_data['luminosity_values'].extend(luminosity_values)
         stored_data['temperature_values'].extend(temperature_values)
         stored_data['humidity_values'].extend(humidity_values)
 
-        # Verificar condições de gatilho e adicionar mensagens
+        # Check conditions for triggers and add alert messages
         if temperature_values[-1] < 15 or temperature_values[-1] > 25:
             send_on_command = True
-            alert_messages.append(f"Temperatura fora da faixa: {temperature_values[-1]} °C.")
+            alert_messages.append(f"Temperature out of range: {temperature_values[-1]} °C.")
 
         if luminosity_values[-1] < 0 or luminosity_values[-1] > 30:
             send_on_command = True
-            alert_messages.append(f"Luminosidade fora da faixa: {luminosity_values[-1]}%.")
+            alert_messages.append(f"Luminosity out of range: {luminosity_values[-1]}%.")
 
         if humidity_values[-1] < 30 or humidity_values[-1] > 50:
             send_on_command = True
-            alert_messages.append(f"Umidade fora da faixa: {humidity_values[-1]}%.")
+            alert_messages.append(f"Humidity out of range: {humidity_values[-1]}%.")
 
-        # Enviar o comando com base nas verificações
+        # Send command based on trigger checks
         if send_on_command:
-            send_command("on")  # Enviar comando "on" se alguma condição estiver fora da faixa
+            send_command("on")  # Send "on" command if any condition is out of range
         else:
-            send_command("off")  # Enviar comando "off" se todas as condições estiverem dentro da faixa
+            send_command("off")  # Send "off" command if all conditions are within range
 
-    # Combinar as mensagens de alerta em uma única string
-    alert_message = [html.P(msg) for msg in alert_messages] if alert_messages else [html.P("Todos os valores estão dentro das faixas aceitáveis.")]
+    # Combine alert messages into a single output string
+    alert_message = [html.P(msg) for msg in alert_messages] if alert_messages else [html.P("All values are within acceptable ranges.")]
 
     return stored_data, alert_message
 
-
+# Callback to update the graph with data from the store
 @app.callback(
     Output('data-graph', 'figure'),
     Input('data-store', 'data')
 )
 def update_graph(stored_data):
     if stored_data['timestamps']:
-        # Create traces for the plot
+        # Create traces for each data type
         trace_luminosity = go.Scatter(
             x=stored_data['timestamps'],
             y=stored_data['luminosity_values'],
@@ -207,10 +215,9 @@ def update_graph(stored_data):
             line=dict(color='blue')
         )
 
-        # Create figure
+        # Create figure with layout
         fig = go.Figure(data=[trace_luminosity, trace_temperature, trace_humidity])
 
-        # Update layout
         fig.update_layout(
             title='Luminosity, Temperature, and Humidity Over Time',
             xaxis_title='Timestamp',
@@ -222,5 +229,6 @@ def update_graph(stored_data):
 
     return {}
 
+# Run the app server
 if __name__ == '__main__':
     app.run_server(debug=True, host=DASH_HOST, port=8050)
