@@ -87,29 +87,26 @@ This project consists of two main components:
 The ESP32 collects data from sensors and communicates with the server, while the dashboard retrieves this data and displays it in an interactive web application. The dashboard also allows sending control commands to the ESP32 based on threshold conditions.
 
 ## Table of Contents
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
+- [ESP32 Features](#ESP32-features)
+- [ESP32 Requirements](#ESP32-requirements)
+- [ESP32 Installation](#ESP32-installation)
 - [ESP32 Setup](#esp32-setup)
-- [Dashboard Usage](#dashboard-usage)
-- [Code Overview](#code-overview)
-  - [ESP32 Code](#esp32-code)
-  - [Dashboard Code](#dashboard-code)
+- [ESP32 Code Overview](#ESP32-code-overview)
 
-## Features
+## ESP32 Features
 - **Real-time monitoring** of environmental data (luminosity, temperature, and humidity).
 - **Configurable alert system** to automatically send control commands if values go outside acceptable ranges.
 - **Data visualization** on an interactive dashboard with historical data.
 - **Remote control** of ESP32 via dashboard commands.
 
-## Requirements
+## ESP32 Requirements
 - **ESP32 Microcontroller**
 - **DHT11/DHT22 Sensor** for temperature and humidity
 - **LDR (Light Dependent Resistor)** for luminosity
 - **Python 3.7+** (for dashboard)
 - Python libraries: `dash`, `plotly`, `requests`, `pytz`
 
-## Installation
+## ESP32 Installation
 
 ### ESP32 Setup
 1. **ESP32 Code**: Flash the provided ESP32 code (`esp32_code.ino`) to your ESP32 board.
@@ -124,7 +121,7 @@ The ESP32 collects data from sensors and communicates with the server, while the
 
 Data Transmission: The ESP32 collects sensor readings every 10 seconds and sends them to the server as a JSON object, allowing the dashboard to retrieve and display the latest data.
 
-# Code Overview
+# ESP32 Code Overview
 
 The ESP32 code is responsible for:
 
