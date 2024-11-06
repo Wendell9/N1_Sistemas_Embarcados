@@ -95,7 +95,6 @@ The ESP32 collects data from sensors and communicates with the server, while the
 - [Code Overview](#code-overview)
   - [ESP32 Code](#esp32-code)
   - [Dashboard Code](#dashboard-code)
-- [License](#license)
 
 ## Features
 - **Real-time monitoring** of environmental data (luminosity, temperature, and humidity).
@@ -126,8 +125,6 @@ The ESP32 collects data from sensors and communicates with the server, while the
 Data Transmission: The ESP32 collects sensor readings every 10 seconds and sends them to the server as a JSON object, allowing the dashboard to retrieve and display the latest data.
 
 # Code Overview
-
-ESP32 Code
 
 The ESP32 code is responsible for:
 
