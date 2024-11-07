@@ -143,5 +143,6 @@ This application is designed for research and proof-of-concept (PoC) development
 
 ![Diagrama fiware drawio](https://github.com/user-attachments/assets/a87638c5-0942-4968-9570-af51865be487)
 
+# Eletric Scheme
 
-
+![image](https://github.com/user-attachments/assets/abaa8e7d-7ae0-4f47-8b88-e2eacaf6e46a)
