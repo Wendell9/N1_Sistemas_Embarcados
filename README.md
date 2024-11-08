@@ -146,3 +146,5 @@ This application is designed for research and proof-of-concept (PoC) development
 # Eletric Scheme
 
 ![image](https://github.com/user-attachments/assets/abaa8e7d-7ae0-4f47-8b88-e2eacaf6e46a)
+
+Wokwi Link: [https://wokwi.com/projects/413097520238635009](https://wokwi.com/projects/413097520238635009)
